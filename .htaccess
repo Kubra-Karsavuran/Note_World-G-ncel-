@@ -1,0 +1,8 @@
+#RewriteEngine on 
+ 
+#RewriteRule ^Hakkinda/([0-9a-zA-Z-_]+)$ hocalar_hakkinda.php?veri_id=$1 [L,NC]z
+
+ 
+
+
+

@@ -1,1 +1,0 @@
-bu dosyada resımler depolanacak

@@ -221,5 +221,15 @@ if (isset($_POST['mesaj_sil'])) {
 	} 
 }
 
+// ogrencı login silme işlemi 
+if (isset($_POST['login_silis'])) {
+	$login_sil_id=$_POST['login_sil_id'];
+	if ($baglanti->query("DELETE FROM `login_ogrenci` WHERE id='$login_sil_id'")) {
+		echo "yes";
+	}else{
+		echo "no";
+	} 
+}
+
 
 ?>

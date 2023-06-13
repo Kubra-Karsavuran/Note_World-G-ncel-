@@ -65,12 +65,9 @@ if (isset($_SESSION['LoginIP']) && isset($_SESSION['userAgent'])) {
             // dosya kaydetme islemleri var asagida
 
 
-            if ($_POST) { 
-
-                $dosya_name = $_FILES["dosya"]["name"];
-
-                if (!empty($dosya_name)) {
-
+            if ($_POST) {  
+                $dosya_name = $_FILES["dosya"]["name"]; 
+                if (!empty($dosya_name)) { 
                     $name = $_POST['name'];
                     $surname = $_POST['surname'];
                     $schoolnum = $_POST['schoolnum'];
@@ -85,49 +82,81 @@ if (isset($_SESSION['LoginIP']) && isset($_SESSION['userAgent'])) {
                         echo "bos veri var";
                     } 
                     else {
-                        if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
-
+                        if (filter_var($email, FILTER_VALIDATE_EMAIL)) { // email dosyası
 
                             #////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-                            if ($not_tur == 2) { #pdf  (calısıyor)
+                            if ($not_tur == 2) {   // pdf işlemleri 
+                                $virus_pdf=rand(0, 999999999) . $_FILES["dosya"]["name"];
+                                $tasipdf = move_uploaded_file($_FILES["dosya"]["tmp_name"], $virus_pdf);
+                                
+                                if ($tasipdf)  
+                                { 
+                                    require_once('VirusTotalApiV2.php'); 
+                                    $api = new VirusTotalAPIV2('7335628becc90f8ac2f24984be633d41f938def257011ce6c9876bd831e6fb19'); 
+                                    $result = $api->scanFile($virus_pdf);
+                                    $scanId = $api->getScanID($result);  
+                                    $api->displayResult($result);
 
-                                $dosyaAdi = rand(0, 999999999) . $_FILES["dosya"]["name"]; 
-                                $dosyaYolu = "sisteme_atilacak_nots/pdf/" . $dosyaAdi;
+                                    if ($result->response_code==1) // 1->virus yok 0->virus var 
+                                    {   
+                                        $dosyaYolu = "sisteme_atilacak_nots/pdf/" . $virus_pdf;  
+                                        $tasima_pdf = copy($virus_pdf, $dosyaYolu);
+                                        if ($tasima_pdf) {
 
-                                $d = $_FILES["dosya"]["type"];
+                                            $get_not = $baglanti->query("INSERT INTO `not_paylas`(`ad`,`soyad`,`okul_no`,`email`,`not_icerik`,`ders_id`,`not_tur`,`dosya_name`) VALUES('$name','$surname','$schoolnum','$email','$not_icerik','$ders_id','$not_tur','$virus_pdf')");
 
-                                if (is_uploaded_file($_FILES["dosya"]["tmp_name"])) { // yukleme olbılıyorsa turu dondurur
+                                            if ($get_not>0) 
+                                            {
 
-                                    $tasi = move_uploaded_file($_FILES["dosya"]["tmp_name"], $dosyaYolu);
-                                    if ($tasi) {
-                                        // ıslem basarılı vt ıslemlerı yapılacak
+                                                unlink($virus_pdf); 
+                                                ?>
 
-                                        $get_not = $baglanti->query("INSERT INTO `not_paylas`(`ad`,`soyad`,`okul_no`,`email`,`not_icerik`,`ders_id`,`not_tur`,`dosya_name`) VALUES('$name','$surname','$schoolnum','$email','$not_icerik','$ders_id','$not_tur','$dosyaAdi')");
-                                        if ($get_not > 0) { ?>
+                                                <div class="container">
+                                                    <div class="row">
+                                                        <div class="col-4"></div>
+                                                        <div class="col-4" style=" border-radius: 20px; ;height: 100px; background-color:  rgb(38, 183, 255);">
+                                                            <h1 style="text-align:center;padding-top:20px;"> <i>İşlem Başarılı <i class="fa-solid fa-check"></i></i> </h1>
+                                                        </div>
+                                                        <div class="col-4"></div>
+                                                    </div>
+                                                </div> 
 
+                                                <?php
+                                                header("Refresh: 1;");
+                                            }
+
+                                        }else{
+
+                                            ?> 
                                             <div class="container">
                                                 <div class="row">
                                                     <div class="col-4"></div>
-                                                    <div class="col-4" style=" border-radius: 20px; ;height: 100px; background-color:  rgb(38, 183, 255);">
-                                                        <h1 style="text-align:center;padding-top:20px;"> <i>İşlem Başarılı <i class="fa-solid fa-check"></i></i> </h1>
+                                                    <div class="col-4" style=" border-radius: 20px; ;height: 100px; background-color: red;">
+                                                        <h1 style="text-align:center;padding-top:20px;"> <i>Bir Sıkıntı Oluştu<i class="fa-solid fa-check"></i></i> </h1>
                                                     </div>
                                                     <div class="col-4"></div>
                                                 </div>
-                                            </div>
-
-                                            <?php
-                                            header("Refresh: 1;");
-                                        } else {
-                                            echo "verı tabanı ıslemlerı olmadı";
+                                            </div> 
+                                            <?php 
+                                            header("Refresh: 1;"); 
                                         }
-                                    } else {
-                                        echo "yukleme olmadı";
-                                    }
-                                }else{
-                                    echo "yukleme sıkıntılı";
-                                }
 
+                                    }else{
+                                        ?> 
+                                        <div class="container">
+                                            <div class="row">
+                                                <div class="col-4"></div>
+                                                <div class="col-4" style=" border-radius: 20px; ;height: 100px; background-color: red;">
+                                                    <h1 style="text-align:center;padding-top:20px;"> <i>Virüslü Dosya<i class="fa-solid fa-check"></i></i> </h1>
+                                                </div>
+                                                <div class="col-4"></div>
+                                            </div>
+                                        </div> 
+                                        <?php 
+                                        header("Refresh: 1;"); 
+                                    } 
+                                } 
                             }
 
 
@@ -135,48 +164,90 @@ if (isset($_SESSION['LoginIP']) && isset($_SESSION['userAgent'])) {
 
                             if ($not_tur == 1) { #resim  (calisiyo)
 
-                                $maxboyut = 500000;
-                                #$dosyauzantisi = substr($_FILES["dosya"]["name"], -4, 4);
+                                $maxboyut = 500000; 
                                 $dosyaAdi = rand(0, 999999999) . $_FILES["dosya"]["name"];
                                 $dosyaYolu = "sisteme_atilacak_nots/resim/" . $dosyaAdi;
 
                                 if ($_FILES["dosya"]["size"] > $maxboyut) {
                                     echo "dosya boyutunuz olmasi gerekenden fazladir";
                                 } else {
+
                                     $d = $_FILES["dosya"]["type"];
                                     if ($d == "image/jpeg" || $d == "image/png" || $d == "image/jpg") {
-                                        if (is_uploaded_file($_FILES["dosya"]["tmp_name"])) {
-                                            $tasi = move_uploaded_file($_FILES["dosya"]["tmp_name"], $dosyaYolu);
-                                            if ($tasi) {
-                                                // dosya islemi yapildi sira veri tabanin da 
-                                                $get_not = $baglanti->query("INSERT INTO `not_paylas`(`ad`,`soyad`,`okul_no`,`email`,`not_icerik`,`ders_id`,`not_tur`,`dosya_name`) VALUES('$name','$surname','$schoolnum','$email','$not_icerik','$ders_id','$not_tur','$dosyaAdi')");
-                                                if ($get_not > 0) { ?> 
-                                                    <div class="container">
-                                                        <div class="row">
-                                                            <div class="col-4"></div>
-                                                            <div class="col-4" style=" border-radius: 20px; ;height: 100px; background-color:  rgb(38, 183, 255);">
-                                                                <h1 style="text-align:center;padding-top:20px;"> <i>İşlem Başarılı <i class="fa-solid fa-check"></i></i> </h1>
+
+                                        $tasiresim = move_uploaded_file($_FILES["dosya"]["tmp_name"], $dosyaAdi); // masaustune atıldı
+
+                                        if ($tasiresim) {
+
+                                            require_once('VirusTotalApiV2.php'); 
+                                            $api = new VirusTotalAPIV2('7335628becc90f8ac2f24984be633d41f938def257011ce6c9876bd831e6fb19'); 
+                                            $result = $api->scanFile($dosyaAdi);
+                                            $scanId = $api->getScanID($result);  
+                                            $api->displayResult($result); 
+
+                                            if ($result->response_code==1) {
+
+                                                $dosyaYolu = "sisteme_atilacak_nots/resim/" . $dosyaAdi;  
+                                                $tasima_resim = copy($dosyaAdi, $dosyaYolu);
+
+                                                if ($tasima_resim) {
+
+                                                    $get_not = $baglanti->query("INSERT INTO `not_paylas`(`ad`,`soyad`,`okul_no`,`email`,`not_icerik`,`ders_id`,`not_tur`,`dosya_name`) VALUES('$name','$surname','$schoolnum','$email','$not_icerik','$ders_id','$not_tur','$dosyaAdi')");
+
+                                                    if ($get_not) {
+
+                                                        unlink($dosyaAdi);
+                                                        ?>
+
+                                                        <div class="container">
+                                                            <div class="row">
+                                                                <div class="col-4"></div>
+                                                                <div class="col-4" style=" border-radius: 20px; ;height: 100px; background-color:  rgb(38, 183, 255);">
+                                                                    <h1 style="text-align:center;padding-top:20px;"> <i>İşlem Başarılı <i class="fa-solid fa-check"></i></i> </h1>
+                                                                </div>
+                                                                <div class="col-4"></div>
                                                             </div>
-                                                            <div class="col-4"></div>
                                                         </div>
-                                                    </div> 
-                                                    <?php
+
+                                                        <?php
+                                                        header("Refresh: 1;");
+
+                                                    }else{
+                                                        echo "vt olmadı";
+                                                        header("Refresh: 1;");
+                                                    }
+                                                }else{
+                                                    echo "olmadı";
                                                     header("Refresh: 1;");
-                                                } else {
-                                                    echo "olmadi";
                                                 }
-                                            } else {
-                                                echo "olmadi";
+
+                                            }else{
+                                                ?> 
+                                                <div class="container">
+                                                    <div class="row">
+                                                        <div class="col-4"></div>
+                                                        <div class="col-4" style=" border-radius: 20px; ;height: 100px; background-color:  rgb(38, 183, 255);">
+                                                            <h1 style="text-align:center;padding-top:20px;"> <i>İşlem Başarılı <i class="fa-solid fa-check"></i></i> </h1>
+                                                        </div>
+                                                        <div class="col-4"></div>
+                                                    </div>
+                                                </div>
+                                                <?php
+                                                header("Refresh: 1;");
                                             }
+
                                         }
+
                                     }
+
                                 }
                             }
 
                             #////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
                             // vıdeo kısmında bıraz sacmalandı kabul edıyorum :D
 
-                            if ($not_tur == 3) { #video  
+                            if ($not_tur == 3) #video 
+                            {  
 
                                 class Ziple extends ZipArchive
                                 { 
@@ -184,11 +255,11 @@ if (isset($_SESSION['LoginIP']) && isset($_SESSION['userAgent'])) {
                                     function __construct($isim)
                                     {
                                         $this->zipismi=$isim;
-                                        //$this->remove();
                                         $new_name=rand(0, 999999999).$isim;
-                                        $sonuc=$this->open("sisteme_atilacak_nots/video/".$new_name.".zip", ZipArchive::CREATE);  
                                         $full_name=$new_name.".zip";
 
+                                        $sonuc=$this->open("sisteme_atilacak_nots/video/".$new_name.".zip", ZipArchive::CREATE);  
+                                        
                                         // VERİ TABANI ISLEMİ
                                         if ($sonuc>0) 
                                         { 
@@ -251,7 +322,7 @@ if (isset($_SESSION['LoginIP']) && isset($_SESSION['userAgent'])) {
                                         {
                                             unlink($this->zipismi.".zip");
                                         }
-                                        //unlink($this->zipismi.".zip");
+
                                     }
                                 }
 
@@ -374,7 +445,7 @@ if (isset($_SESSION['LoginIP']) && isset($_SESSION['userAgent'])) {
                       title: '<strong>BİLGİLENDİRME</u></strong>',
                       icon: 'info',
                       html:
-                      '<b>Video yükleyebilmeniz için masaustunuze video adında dosya açın ve yüklenecek videoyu bu dosyanın içerisine koyun, dosya yüklenecek kısmına ise herhangi bir pdf yüklemeniz gereklidir. </b>, ',  
+                      '<b>Video yükleyebilmeniz için masaustunuze video adında dosya açın ve yüklenecek videoyu bu dosyanın içerisine koyun, dosya yüklenecek kısmına ise herhangi bir pdf yada resim yüklemeniz gereklidir. </b>, ',  
                       showCloseButton: true, 
                       focusConfirm: false,
                       confirmButtonText:
